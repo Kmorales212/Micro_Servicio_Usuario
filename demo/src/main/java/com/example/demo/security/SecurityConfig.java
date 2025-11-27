@@ -17,9 +17,17 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs
             .authorizeHttpRequests(auth -> auth
-                // Permitir acceso libre a Login y Registro
+                // 1. Permitir acceso libre a Login y Registro (Tus rutas actuales)
                 .requestMatchers("/usuarios/login", "/usuarios").permitAll()
-                // Cualquier otra ruta requiere autenticación (opcional por ahora)
+                
+                // 2. 👇 Permitir acceso libre a la Documentación de SWAGGER 👇
+                .requestMatchers(
+                        "/swagger-ui/**", 
+                        "/v3/api-docs/**",
+                        "/swagger-ui.html"
+                ).permitAll()
+                
+                // 3. Cualquier otra ruta requiere autenticación (Token JWT)
                 .anyRequest().authenticated()
             );
 
