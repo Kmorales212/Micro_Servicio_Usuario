@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends JpaRepository<UserModel, Long> {
 
-    // Spring crea automáticamente el SQL: "SELECT * FROM usuario WHERE email = ?"
     UserModel findByEmail(String email);
 
 }

@@ -3,7 +3,6 @@ package com.example.demo.controller;
 import com.example.demo.model.UserModel;
 import com.example.demo.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/usuarios")
-// 1. Título y descripción general del controlador
 @Tag(name = "Gestión de Usuarios", description = "Operaciones para registro, login y administración de usuarios")
 public class UserController {
 
@@ -29,8 +27,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    // --- 1. REGISTRO ---
-    @Operation(summary = "Registrar un nuevo usuario", description = "Crea un usuario en la base de datos y encripta su contraseña")
+    @Operation(summary = "Registrar un nuevo usuario")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Usuario creado exitosamente"),
         @ApiResponse(responseCode = "400", description = "Error en los datos enviados")
@@ -38,6 +35,11 @@ public class UserController {
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody UserModel user) {
         try {
+
+            if (user.getRole() == null || user.getRole().isEmpty()) {
+                user.setRole("CLIENT");
+            }
+
             UserModel savedUser = userService.saveUser(user);
             return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
         } catch (Exception e) {
@@ -45,17 +47,15 @@ public class UserController {
         }
     }
 
-    // --- 2. LOGIN ---
-    @Operation(summary = "Autenticar usuario (Login)", description = "Verifica credenciales y devuelve un Token JWT")
+    @Operation(summary = "Autenticar usuario (Login)", description = "Devuelve Token + ID + ROL del usuario")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Login exitoso, devuelve el Token"),
-        @ApiResponse(responseCode = "401", description = "Credenciales incorrectas o usuario no encontrado")
+        @ApiResponse(responseCode = "200", description = "Login exitoso"),
+        @ApiResponse(responseCode = "401", description = "Credenciales incorrectas")
     })
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserModel loginRequest) {
         try {
-            String token = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            Map<String, String> response = Collections.singletonMap("token", token);
+            Map<String, Object> response = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -63,38 +63,20 @@ public class UserController {
         }
     }
 
-    // --- 3. MÉTODOS CRUD ---
-
-    @Operation(summary = "Listar todos los usuarios", description = "Devuelve una lista completa de usuarios registrados")
-    @ApiResponse(responseCode = "200", description = "Operación exitosa")
     @GetMapping
     public ResponseEntity<List<UserModel>> getAllUsers() {
-        List<UserModel> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @Operation(summary = "Buscar usuario por ID", description = "Obtiene los detalles de un usuario específico")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
-        @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    })
     @GetMapping("/{id}")
-    public ResponseEntity<UserModel> getUserById(
-            @Parameter(description = "ID del usuario a buscar") @PathVariable Long id) {
+    public ResponseEntity<UserModel> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Actualizar usuario", description = "Modifica los datos de un usuario existente")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Usuario actualizado correctamente"),
-        @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
-    })
     @PutMapping("/{id}")
-    public ResponseEntity<UserModel> updateUser(
-            @Parameter(description = "ID del usuario a editar") @PathVariable Long id, 
-            @RequestBody UserModel userDetails) {
+    public ResponseEntity<UserModel> updateUser(@PathVariable Long id, @RequestBody UserModel userDetails) {
         UserModel updatedUser = userService.updateUser(id, userDetails);
         if (updatedUser != null) {
             return ResponseEntity.ok(updatedUser);
@@ -102,13 +84,8 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
-    @Operation(summary = "Eliminar usuario", description = "Elimina permanentemente un usuario de la base de datos")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Usuario eliminado correctamente")
-    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(
-            @Parameter(description = "ID del usuario a eliminar") @PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
